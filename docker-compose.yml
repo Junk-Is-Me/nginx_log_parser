@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/fastcgi.conf:/etc/nginx/fastcgi.conf
+    depends_on:
+      - php_yii2
+      - mysql
+    networks:
+      - mynetwork
+
+  php_yii2:
+    build: .
+    container_name: php_yii2
+    volumes:
+      - ./src:/var/www/html
+    networks:
+      - mynetwork
+
+  mysql:
+    image: mysql:5.7
+    container_name: mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: yii2
+      MYSQL_USER: yii2
+      MYSQL_PASSWORD: yii2
+    volumes:
+      - ./mysql_data:/var/lib/mysql 
+    networks:
+      - mynetwork
+
+  phpmyadmin_php:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "8081:80"
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
+    driver: bridge
