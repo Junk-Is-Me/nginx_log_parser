@@ -36,7 +36,8 @@ services:
       MYSQL_USER: yii2
       MYSQL_PASSWORD: yii2
     volumes:
-      - ./mysql_data:/var/lib/mysql 
+      - ./mysql_data:/var/lib/mysql
+      - ./my.cnf:/etc/mysql/conf.d/custom.cnf
     networks:
       - mynetwork
 

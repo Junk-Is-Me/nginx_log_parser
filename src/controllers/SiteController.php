@@ -3,126 +3,70 @@
 namespace app\controllers;
 
 use Yii;
-use yii\filters\AccessControl;
 use yii\web\Controller;
-use yii\web\Response;
-use yii\filters\VerbFilter;
-use app\models\LoginForm;
-use app\models\ContactForm;
+use app\models\Log;
+use yii\data\ActiveDataProvider;
+use yii\helpers\ArrayHelper;
 
 class SiteController extends Controller
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function behaviors()
+    public function actionParseStatistics()
     {
-        return [
-            'access' => [
-                'class' => AccessControl::class,
-                'only' => ['logout'],
-                'rules' => [
-                    [
-                        'actions' => ['logout'],
-                        'allow' => true,
-                        'roles' => ['@'],
-                    ],
-                ],
+        $query = (new \yii\db\Query())
+            ->select([
+                'DATE(requested_at) as date',
+                'COUNT(*) as total',
+                '(SELECT url FROM log l2 WHERE DATE(l2.requested_at) = DATE(l.requested_at) GROUP BY url ORDER BY COUNT(*) DESC LIMIT 1) as top_url',
+                '(SELECT browser FROM log l3 WHERE DATE(l3.requested_at) = DATE(l.requested_at) GROUP BY browser ORDER BY COUNT(*) DESC LIMIT 1) as top_browser',
+            ])
+            ->from('log l')
+            ->groupBy(['DATE(requested_at)'])
+            ->orderBy(['DATE(requested_at)' => SORT_DESC]);
+
+        $dataProvider = new \yii\data\ArrayDataProvider([
+            'allModels' => $query->all(),
+            'pagination' => false,
+            'sort' => [
+                'attributes' => ['date', 'total', 'top_url', 'top_browser'],
             ],
-            'verbs' => [
-                'class' => VerbFilter::class,
-                'actions' => [
-                    'logout' => ['post'],
-                ],
-            ],
-        ];
+        ]);
+
+        return $this->render('parseStatistics', [
+            'dataProvider' => $dataProvider,
+        ]);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function actions()
-    {
-        return [
-            'error' => [
-                'class' => 'yii\web\ErrorAction',
-            ],
-            'captcha' => [
-                'class' => 'yii\captcha\CaptchaAction',
-                'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
-            ],
-        ];
-    }
 
-    /**
-     * Displays homepage.
-     *
-     * @return string
-     */
     public function actionIndex()
     {
-        return $this->render('index');
-    }
+        $request = Yii::$app->request;
 
-    /**
-     * Login action.
-     *
-     * @return Response|string
-     */
-    public function actionLogin()
-    {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
+        // Получаем фильтры из GET
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
+
+        $query = Log::find();
+
+        if ($dateFrom) {
+            $query->andWhere(['>=', 'requested_at', $dateFrom . ' 00:00:00']);
+        }
+        if ($dateTo) {
+            $query->andWhere(['<=', 'requested_at', $dateTo . ' 23:59:59']);
         }
 
-        $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
-        }
+        $query->orderBy(['requested_at' => SORT_DESC]);
 
-        $model->password = '';
-        return $this->render('login', [
-            'model' => $model,
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'pageSize' => 20,
+            ],
         ]);
-    }
 
-    /**
-     * Logout action.
-     *
-     * @return Response
-     */
-    public function actionLogout()
-    {
-        Yii::$app->user->logout();
-
-        return $this->goHome();
-    }
-
-    /**
-     * Displays contact page.
-     *
-     * @return Response|string
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
-
-            return $this->refresh();
-        }
-        return $this->render('contact', [
-            'model' => $model,
+        return $this->render('index', [
+            'dataProvider' => $dataProvider,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
         ]);
-    }
-
-    /**
-     * Displays about page.
-     *
-     * @return string
-     */
-    public function actionAbout()
-    {
-        return $this->render('about');
     }
 }

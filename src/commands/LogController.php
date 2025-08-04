@@ -1,9 +1,11 @@
 <?php
+
 namespace app\commands;
 
 use yii\console\Controller;
 use app\models\Log;
 use donatj\UserAgent\UserAgentParser;
+
 class LogController extends Controller
 {
     private function parseLogFile(string $filePath): \Generator
@@ -31,6 +33,9 @@ class LogController extends Controller
         $lineNum = 0;
         $parsed = 0;
 
+        $batchSize = 500;
+        $batchData = [];
+
         foreach ($this->parseLogFile($filePath) as $match) {
             $lineNum++;
 
@@ -51,24 +56,48 @@ class LogController extends Controller
             $requestParts = explode(' ', $match['request']);
             $url = $requestParts[1] ?? '';
 
-            $log = new Log();
-            $log->ip = $match['ip'];
-            $log->requested_at = date('Y-m-d H:i:s', strtotime($match['date']));
-            $log->url = $url;
-            $log->user_agent = $match['useragent'];
-            $log->os = $os;
-            $log->architecture = $arch;
-            $log->browser = $browser;
+            $batchData[] = [
+                $match['ip'],
+                date('Y-m-d H:i:s', strtotime($match['date'])),
+                $url,
+                $match['useragent'],
+                $os,
+                $arch,
+                $browser,
+            ];
 
-            if (!$log->save()) {
-                echo "Ошибка сохранения записи в строке $lineNum\n";
-                print_r($log->getErrors());
-            } else {
-                $parsed++;
+            if (count($batchData) >= $batchSize) {
+                $this->saveBatch($batchData);
+                $batchData = [];
             }
+            $parsed++;
+        }
+
+        if (!empty($batchData)) {
+            $this->saveBatch($batchData);
         }
 
         echo "Всего строк: $lineNum, успешно разобрано: $parsed\n";
     }
 
+    private function saveBatch(array $batchData)
+    {
+        $columns = ['ip', 'requested_at', 'url', 'user_agent', 'os', 'architecture', 'browser'];
+
+        $transaction = \Yii::$app->db->beginTransaction();
+        try {
+            \Yii::$app->db->createCommand()->batchInsert(
+                Log::tableName(),
+                $columns,
+                $batchData
+            )->execute();
+
+            $transaction->commit();
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            echo "Ошибка при вставке: " . $e->getMessage() . "\n";
+            throw $e;
+        }
+        gc_collect_cycles();
+    }
 }
