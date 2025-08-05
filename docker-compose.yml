@@ -33,8 +33,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: ngins_logs
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root
+      MYSQL_USER: yii2
+      MYSQL_PASSWORD: yii2
     volumes:
       - ./mysql_data:/var/lib/mysql
       - ./my.cnf:/etc/mysql/conf.d/custom.cnf
@@ -56,3 +56,4 @@ services:
 networks:
   mynetwork:
     driver: bridge
+
