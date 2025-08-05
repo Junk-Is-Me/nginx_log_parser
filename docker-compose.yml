@@ -32,7 +32,7 @@ services:
       - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: ngins_logs
+      MYSQL_DATABASE: nginx_logs
       MYSQL_USER: yii2
       MYSQL_PASSWORD: yii2
     volumes:
@@ -56,4 +56,5 @@ services:
 networks:
   mynetwork:
     driver: bridge
+
 
