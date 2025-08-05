@@ -85,6 +85,7 @@ class LogController extends Controller
         $columns = ['ip', 'requested_at', 'url', 'user_agent', 'os', 'architecture', 'browser'];
 
         $transaction = \Yii::$app->db->beginTransaction();
+        
         try {
             \Yii::$app->db->createCommand()->batchInsert(
                 Log::tableName(),
