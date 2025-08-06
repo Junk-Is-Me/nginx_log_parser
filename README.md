@@ -45,10 +45,7 @@ https://github.com/donatj/PhpUserAgent
 ## Работа приложения
 
 - Приложение работает на порту: http://localhost:8080  
-- Доступны 2 страницы:  
-  1. http://localhost:8080/site/index — таблица логов с сортировкой и фильтрацией по дате.  
-  2. http://localhost:8080/site/statistics — статистика: количество запросов, топ-5 URL, топ-5 браузеров.
-
+Графики и таблицы показывает на странице - http://localhost:8080/site/statistic
 ---
 
 ## Разворачивание через Docker
@@ -73,3 +70,4 @@ https://github.com/donatj/PhpUserAgent
 
 7. Запустить парсинг логов:  
    docker exec -it php_yii2 php yii log/parse-log access.log
+
